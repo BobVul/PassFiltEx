@@ -137,10 +137,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="PassFiltEx.c" />
+    <ClCompile Include="trie.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PassFiltEx.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="trie.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PassFiltEx.rc" />
