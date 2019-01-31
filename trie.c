@@ -7,6 +7,7 @@
 #endif
 
 #include "trie.h"
+#include "logging.h"
 
 #pragma warning(push, 0) 
 #include <Windows.h>
@@ -15,6 +16,11 @@
 static TrieNode *create_node(void)
 {
 	TrieNode *t = HeapAlloc(GetProcessHeap(), 0, sizeof(TrieNode));
+	if (t == NULL)
+	{
+		EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to allocate memory for trie node!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+		return NULL;
+	}
 	t->key = '\0';
 	t->value = 0;
 	t->nextSibling = NULL;
@@ -35,12 +41,12 @@ static void destroy_node(TrieNode *root)
 	HeapFree(GetProcessHeap(), 0, root);
 }
 
-static void set(TrieNode *root, const char key[], int value)
+static BOOL set(TrieNode *root, const char key[], int value)
 {
 	if (key[0] == '\0')
 	{
 		root->value = value;
-		return;
+		return TRUE;
 	}
 
 	TrieNode *lastChild = NULL;
@@ -49,8 +55,7 @@ static void set(TrieNode *root, const char key[], int value)
 	{
 		if (child->key == key[0])
 		{
-			set(child, key + 1, value);
-			return;
+			return set(child, key + 1, value);
 		}
 		lastChild = child;
 		child = child->nextSibling;
@@ -58,6 +63,11 @@ static void set(TrieNode *root, const char key[], int value)
 
 	// child == NULL
 	TrieNode *t = create_node();
+	if (t == NULL)
+	{
+		return FALSE;
+	}
+
 	t->key = key[0];
 
 	if (lastChild == NULL)
@@ -69,7 +79,7 @@ static void set(TrieNode *root, const char key[], int value)
 		lastChild->nextSibling = t;
 	}
 
-	set(t, key + 1, value);
+	return set(t, key + 1, value);
 }
 
 static int get(TrieNode *root, const char key[])
@@ -102,9 +112,9 @@ void trie_destroy(Trie trie)
 	destroy_node(trie);
 }
 
-void trie_set(Trie trie, const char key[], int value)
+BOOL trie_set(Trie trie, const char key[], int value)
 {
-	set(trie, key, value);
+	return set(trie, key, value);
 }
 
 int trie_get(Trie trie, const char key[])

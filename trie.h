@@ -2,6 +2,10 @@
 #define TRIE_H
 #pragma once
 
+#pragma warning(push, 0)
+#include <Windows.h>
+#pragma warning(pop)
+
 typedef struct trie_node TrieNode, *Trie;
 
 struct trie_node {
@@ -13,7 +17,7 @@ struct trie_node {
 
 Trie trie_create(void);
 void trie_destroy(Trie trie_node);
-void trie_set(Trie trie_node, const char key[], int value);
+BOOL trie_set(Trie trie_node, const char key[], int value);
 int trie_get(Trie trie_node, const char key[]);
 
 #endif
