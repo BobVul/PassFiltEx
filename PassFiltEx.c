@@ -594,7 +594,7 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 			if (gBlacklistTrie != NULL) // if we have a trie and it's not the first time
 			{
 				// Need to clear blacklist and free memory first.
-				if (trie_destroy(gBlacklistTrie) != 0)
+				if (trie_destroy(gBlacklistTrie) == 0)
 				{
 					EventWriteStringW2(L"[%s:%s@%d] Failed to clear blacklist!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
 
