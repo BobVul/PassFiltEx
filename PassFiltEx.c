@@ -445,6 +445,8 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 	}	
 
 	wchar_t* PasswordCopy = NULL;
+	char *utf8Password = NULL;
+	int utf8PasswordSize = 0;
 	
 	if ((PasswordCopy = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, Password->MaximumLength)) == NULL)
 	{
@@ -467,16 +469,14 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 	int bytesRequired = WideCharToMultiByte(CP_UTF8, 0, Password->Buffer, Password->Length / sizeof(WCHAR), NULL, 0, NULL, NULL);
 	if (bytesRequired == 0)
 	{
-		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password! Error 0x%08lx", __FILENAMEW__, __FUNCTIONW__, __LINE__, GetLastError());
 
 		PasswordIsOK = FALSE;
 
 		goto End;
 	}
 
-	int utf8PasswordSize = bytesRequired + 1; // + 1 for the null terminator, which WideCharToMultiByte won't add since we specified input length
-
-	char *utf8Password = NULL;
+	utf8PasswordSize = bytesRequired + 1; // + 1 for the null terminator, which WideCharToMultiByte won't add since we specified input length
 
 	if ((utf8Password = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, utf8PasswordSize)) == NULL)
 	{
@@ -490,21 +490,21 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 	int bytesCopied = WideCharToMultiByte(CP_UTF8, 0, Password->Buffer, Password->Length / sizeof(WCHAR), utf8Password, utf8PasswordSize, NULL, NULL);
 	if (bytesCopied == 0)
 	{
-		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password! Error 0x%08lx", __FILENAMEW__, __FUNCTIONW__, __LINE__, GetLastError());
 
 		PasswordIsOK = FALSE;
 
 		goto End;
 	}
 
-	for (int i = 0; i < strlen(utf8Password), i++)
+	for (unsigned int i = 0; i < strlen(utf8Password); i++)
 	{
 		int matchlen = trie_longest_match(trie, utf8Password);
 		if (matchlen)
 		{
 			if (((float)matchlen / (float)strlen(utf8Password)) >= (float)gTokenPercentageOfPassword / 100)
 			{
-				EventWriteStringW2(L"[%s:%s@%d] Rejecting password because it contains the blacklisted string \"%s\" and it is at least %lu%% of the full password!", __FILENAMEW__, __FUNCTIONW__, __LINE__, CurrentNode->String, gTokenPercentageOfPassword);
+				EventWriteStringW2(L"[%s:%s@%d] Rejecting password because it contains a blacklisted string and it is at least %lu%% of the full password!", __FILENAMEW__, __FUNCTIONW__, __LINE__, gTokenPercentageOfPassword);
 
 				PasswordIsOK = FALSE;
 
