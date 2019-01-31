@@ -2,12 +2,14 @@
 #define TRIE_H
 #pragma once
 
-typedef struct trie_node {
+typedef struct trie_node TrieNode, *Trie;
+
+struct trie_node {
 	char key;
 	int value;
-	Trie *firstChild;
-	Trie *nextSibling;
-} TrieNode, *Trie;
+	TrieNode *firstChild;
+	TrieNode *nextSibling;
+};
 
 Trie trie_create(void);
 void trie_destroy(Trie trie_node);

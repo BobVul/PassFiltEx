@@ -3,11 +3,12 @@
 
 static TrieNode *create_node(void)
 {
-	TrieNode *t = HeapAlloc(GetProgramHeap(), 0, sizeof(TrieNode));
+	TrieNode *t = HeapAlloc(GetProcessHeap(), 0, sizeof(TrieNode));
 	t->key = '\0';
 	t->value = 0;
 	t->nextSibling = NULL;
 	t->firstChild = NULL;
+	return t;
 }
 
 static void destroy_node(TrieNode *root)
