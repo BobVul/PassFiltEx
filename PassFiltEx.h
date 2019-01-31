@@ -6,8 +6,6 @@
 // Disable warnings about adding padding bytes to structs.
 #pragma warning(disable: 4820)
 
-#define __FILENAMEW__ (wcsrchr(__FILEW__, L'\\') ? wcsrchr(__FILEW__, L'\\') + 1 : __FILEW__)
-
 #define MAX_BLACKLIST_STRING_SIZE 128
 
 #define BLACKLIST_THREAD_RUN_FREQUENCY 60000

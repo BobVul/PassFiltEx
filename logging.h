@@ -8,6 +8,7 @@
 #pragma warning(pop)
 
 #define ETW_MAX_STRING_SIZE 2048
+#define __FILENAMEW__ (wcsrchr(__FILEW__, L'\\') ? wcsrchr(__FILEW__, L'\\') + 1 : __FILEW__)
 
 extern REGHANDLE gEtwRegHandle;
 
