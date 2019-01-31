@@ -39,16 +39,16 @@ static int destroy_node(TrieNode *root)
 {
 	if (root == NULL)
 	{
-		return 0;
+		return 1;
 	}
 
-	int status = 0;
-	if ((status = destroy_node(root->firstChild)) != 0)
+	int status = 1;
+	if ((status = destroy_node(root->firstChild)) == 0)
 	{
 		return status;
 	}
 	root->firstChild = NULL;
-	if ((status = destroy_node(root->nextSibling)) != 0)
+	if ((status = destroy_node(root->nextSibling)) == 0)
 	{
 		return status;
 	}
@@ -60,7 +60,7 @@ static int destroy_node(TrieNode *root)
 		return status;
 	}
 
-	return 0;
+	return 1;
 }
 
 static BOOL add(TrieNode *root, const char key[], unsigned char depth)
