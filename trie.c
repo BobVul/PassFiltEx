@@ -1,5 +1,7 @@
 #include "trie.h"
+#pragma warning(push, 0) 
 #include <Windows.h>
+#pragma warning(pop) 
 
 static TrieNode *create_node(void)
 {
