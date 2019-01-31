@@ -35,20 +35,35 @@ static TrieNode *create_node(void)
 	return t;
 }
 
-static void destroy_node(TrieNode *root)
+static int destroy_node(TrieNode *root)
 {
 	if (root == NULL)
 	{
-		return;
+		return 0;
 	}
 
-	destroy_node(root->firstChild);
-	destroy_node(root->nextSibling);
+	int status = 0;
+	if ((status = destroy_node(root->firstChild)) != 0)
+	{
+		return status;
+	}
+	root->firstChild = NULL;
+	if ((status = destroy_node(root->nextSibling)) != 0)
+	{
+		return status;
+	}
+	root->nextSibling = NULL;
 
-	HeapFree(GetProcessHeap(), 0, root);
+	if ((status = HeapFree(GetProcessHeap(), 0, root)) == 0)
+	{
+		EventWriteStringW2(L"[%s:%s@%d] HeapFree failed while destroying trie! Error 0x%08lx", __FILENAMEW__, __FUNCTIONW__, __LINE__, GetLastError());
+		return status;
+	}
+
+	return 0;
 }
 
-static BOOL add(TrieNode *root, const char key[], int depth)
+static BOOL add(TrieNode *root, const char key[], unsigned char depth)
 {
 	if (key[0] == '\0')
 	{
@@ -118,13 +133,18 @@ Trie trie_create(void)
 	return create_node();
 }
 
-void trie_destroy(Trie trie)
+int trie_destroy(Trie trie)
 {
-	destroy_node(trie);
+	return destroy_node(trie);
 }
 
 BOOL trie_add(Trie trie, const char key[])
 {
+	if (key[0] == '\0')
+	{
+		EventWriteStringW2(L"[%s:%s@%d] Trie: Ignoring empty key", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+		return TRUE;
+	}
 	return add(trie, key, 0);
 }
 

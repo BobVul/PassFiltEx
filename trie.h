@@ -9,7 +9,7 @@
 typedef struct trie_node TrieNode, *Trie;
 
 Trie trie_create(void);
-void trie_destroy(Trie trie);
+int trie_destroy(Trie trie);
 BOOL trie_add(Trie trie, const char key[]);
 int trie_longest_match(Trie trie, const char key[]);
 
