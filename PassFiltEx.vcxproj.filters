@@ -21,6 +21,9 @@
     <ClCompile Include="trie.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="logging.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -30,6 +33,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="trie.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="logging.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

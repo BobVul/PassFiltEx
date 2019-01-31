@@ -190,13 +190,12 @@ and as reliable as you can possibly imagine. Avoid being "clever" and just write
 
 #include <evntprov.h>
 
-#include <stdio.h>
-
 // Restore warnings.
 #pragma warning(pop)
 
 #include "PassFiltEx.h"
 
+#include "logging.h"
 
 
 REGHANDLE gEtwRegHandle;
@@ -697,25 +696,6 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 	}
 
 	return(0);
-}
-
-ULONG EventWriteStringW2(_In_ PCWSTR String, _In_ ...)
-{
-	wchar_t FormattedString[ETW_MAX_STRING_SIZE] = { 0 };
-
-	va_list ArgPointer = NULL;
-
-	va_start(ArgPointer, String);
-
-	_vsnwprintf_s(FormattedString, sizeof(FormattedString) / sizeof(wchar_t), _TRUNCATE, String, ArgPointer);
-
-	va_end(ArgPointer);
-	
-#if DEBUG
-	wprintf(L"%ls\r\n", FormattedString);
-#endif
-
-	return(EventWriteString(gEtwRegHandle, 0, 0, FormattedString));
 }
 
 DWORD UpdateConfigurationFromRegistry(void)
