@@ -499,7 +499,7 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 
 	for (unsigned int i = 0; i < strlen(utf8Password); i++)
 	{
-		int matchlen = trie_longest_match(trie, utf8Password);
+		int matchlen = trie_longest_match(trie, utf8Password + i);
 		if (matchlen)
 		{
 			if (((float)matchlen / (float)strlen(utf8Password)) >= (float)gTokenPercentageOfPassword / 100)
