@@ -591,41 +591,25 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 		{
 			EventWriteStringW2(L"[%s:%s@%d] The last modified time of %s has changed since the last time we looked. Let's reload it.", __FILENAMEW__, __FUNCTIONW__, __LINE__, gBlacklistFileName);			
 
-			// Initialize list head if we're here for the first time.
-			if (gBlacklistHead == NULL)
+			if (gBlacklistTrie != NULL) // if we have a trie and it's not the first time
 			{
-				if ((gBlacklistHead = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(BADSTRING))) == NULL)
+				// Need to clear blacklist and free memory first.
+				if (trie_destroy(gBlacklistTrie) == 0)
 				{
-					EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to allocate memory for list head!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+					EventWriteStringW2(L"[%s:%s@%d] Failed to clear blacklist!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
 
 					goto Sleep;
 				}
+
+				gBlacklistTrie = NULL;
 			}
 
-			// Need to clear blacklist and free memory first.
-			BADSTRING* CurrentNode = gBlacklistHead;
-
-			while (CurrentNode->Next != NULL)
+			if ((gBlacklistTrie = trie_create()) == NULL)
 			{
-				CurrentNode = CurrentNode->Next;
-
-				if (HeapFree(GetProcessHeap(), 0, CurrentNode) == 0)
-				{
-					EventWriteStringW2(L"[%s:%s@%d] HeapFree failed while clearing blacklist! Error 0x%08lx", __FILENAMEW__, __FUNCTIONW__, __LINE__, GetLastError());
-
-					goto Sleep;
-				}
-			}
-
-			// Create a new node for the first line of text in the file.
-			if ((CurrentNode = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(BADSTRING))) == NULL)
-			{
-				EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to allocate memory for list node!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+				EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to allocate memory for trie!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
 
 				goto Sleep;
 			}
-
-			gBlacklistHead->Next = CurrentNode;
 
 			DWORD TotalBytesRead = 0;
 
@@ -636,6 +620,9 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 			DWORD BytesOnThisLine = 0;
 
 			DWORD LinesRead = 1;
+
+			char readBuffer[MAX_BLACKLIST_STRING_SIZE];
+			ZeroMemory(readBuffer, MAX_BLACKLIST_STRING_SIZE);
 
 			while (TRUE)
 			{
@@ -672,18 +659,14 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 				{
 					BytesOnThisLine = 0;
 
-					BADSTRING* NewNode = NULL;
-
-					if ((NewNode = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(BADSTRING))) == NULL)
+					if (trie_add(gBlacklistTrie, readBuffer) == FALSE)
 					{
-						EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to allocate memory for list node!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+						EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to add string to trie!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
 
 						goto Sleep;
 					}
 
-					CurrentNode->Next = NewNode;
-
-					CurrentNode = NewNode;					
+					ZeroMemory(readBuffer, MAX_BLACKLIST_STRING_SIZE);			
 
 					TotalBytesRead++;
 
@@ -693,11 +676,18 @@ DWORD WINAPI BlacklistThreadProc(_In_ LPVOID Args)
 				}
 				
 
-				CurrentNode->String[BytesOnThisLine] = (wchar_t)towlower(Read);
+				readBuffer[BytesOnThisLine] = (char)tolower(Read);
 
 				TotalBytesRead++;
 
 				BytesOnThisLine++;
+			}
+
+			if (trie_add(gBlacklistTrie, readBuffer) == FALSE)
+			{
+				EventWriteStringW2(L"[%s:%s@%d] ERROR: Failed to add string to trie!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+
+				goto Sleep;
 			}
 
 			EventWriteStringW2(L"[%s:%s@%d] Read %lu bytes, %lu lines from file %s", __FILENAMEW__, __FUNCTIONW__, __LINE__, TotalBytesRead, LinesRead, gBlacklistFileName);
