@@ -194,8 +194,8 @@ and as reliable as you can possibly imagine. Avoid being "clever" and just write
 #pragma warning(pop)
 
 #include "PassFiltEx.h"
-
 #include "logging.h"
+#include "trie.h"
 
 
 REGHANDLE gEtwRegHandle;
@@ -204,7 +204,7 @@ HANDLE gBlacklistThread;
 
 CRITICAL_SECTION gBlacklistCritSec;
 
-BADSTRING* gBlacklistHead;
+Trie gBlacklistTrie;
 
 FILETIME gBlackListOldFileTime;
 
@@ -424,7 +424,7 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 
 	QueryPerformanceCounter(&StartTime);
 
-	BADSTRING* CurrentNode = gBlacklistHead;
+	Trie trie = gBlacklistTrie;
 
 	// UNICODE_STRINGs are usually not null-terminated.
 	// Let's make a null-terminated copy of it.
@@ -464,20 +464,45 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 		}	
 	}
 
-	while (CurrentNode != NULL && CurrentNode->Next != NULL)
+	int bytesRequired = WideCharToMultiByte(CP_UTF8, 0, Password->Buffer, Password->Length / sizeof(WCHAR), NULL, 0, NULL, NULL);
+	if (bytesRequired == 0)
 	{
-		CurrentNode = CurrentNode->Next;
+		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
 
-		if (wcslen(CurrentNode->String) == 0)
+		PasswordIsOK = FALSE;
+
+		goto End;
+	}
+
+	int utf8PasswordSize = bytesRequired + 1; // + 1 for the null terminator, which WideCharToMultiByte won't add since we specified input length
+
+	char *utf8Password = NULL;
+
+	if ((utf8Password = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, utf8PasswordSize)) == NULL)
+	{
+		EventWriteStringW2(L"[%s:%s@%d] Error allocating memory! Cannot change password!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+
+		PasswordIsOK = FALSE;
+
+		goto End;
+	}
+
+	int bytesCopied = WideCharToMultiByte(CP_UTF8, 0, Password->Buffer, Password->Length / sizeof(WCHAR), utf8Password, utf8PasswordSize, NULL, NULL);
+	if (bytesCopied == 0)
+	{
+		EventWriteStringW2(L"[%s:%s@%d] Error converting to UTF-8! Cannot change password!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
+
+		PasswordIsOK = FALSE;
+
+		goto End;
+	}
+
+	for (int i = 0; i < strlen(utf8Password), i++)
+	{
+		int matchlen = trie_longest_match(trie, utf8Password);
+		if (matchlen)
 		{
-			EventWriteStringW2(L"[%s:%s@%d] ERROR: This blacklist token is 0 characters long. It will be skipped. Check your blacklist file for blank lines!", __FILENAMEW__, __FUNCTIONW__, __LINE__);
-
-			continue;
-		}
-
-		if (wcsstr(PasswordCopy, CurrentNode->String))
-		{
-			if (((float)wcslen(CurrentNode->String) / (float)wcslen(PasswordCopy)) >= (float)gTokenPercentageOfPassword / 100)
+			if (((float)matchlen / (float)strlen(utf8Password)) >= (float)gTokenPercentageOfPassword / 100)
 			{
 				EventWriteStringW2(L"[%s:%s@%d] Rejecting password because it contains the blacklisted string \"%s\" and it is at least %lu%% of the full password!", __FILENAMEW__, __FUNCTIONW__, __LINE__, CurrentNode->String, gTokenPercentageOfPassword);
 
@@ -506,6 +531,13 @@ __declspec(dllexport) BOOL CALLBACK PasswordFilter(_In_ PUNICODE_STRING AccountN
 
 		HeapFree(GetProcessHeap(), 0, PasswordCopy);
 	}	
+
+	if (utf8Password != NULL)
+	{
+		SecureZeroMemory(utf8Password, utf8PasswordSize);
+
+		HeapFree(GetProcessHeap(), 0, utf8Password);
+	}
 
 	LeaveCriticalSection(&gBlacklistCritSec);
 
