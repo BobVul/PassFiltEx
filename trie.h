@@ -8,16 +8,9 @@
 
 typedef struct trie_node TrieNode, *Trie;
 
-struct trie_node {
-	char key;
-	int value;
-	TrieNode *firstChild;
-	TrieNode *nextSibling;
-};
-
 Trie trie_create(void);
-void trie_destroy(Trie trie_node);
-BOOL trie_set(Trie trie_node, const char key[], int value);
-int trie_get(Trie trie_node, const char key[]);
+void trie_destroy(Trie trie);
+BOOL trie_add(Trie trie, const char key[]);
+int trie_longest_match(Trie trie, const char key[]);
 
 #endif

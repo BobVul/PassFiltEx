@@ -13,6 +13,13 @@
 #include <Windows.h>
 #pragma warning(pop) 
 
+struct trie_node {
+	char key; // character identifying the node. can be a utf8
+	unsigned char depth; // depth in trie if node is a leaf node, i.e. explicitly added, otherwise zero
+	TrieNode *firstChild; // first child of a linked list at the next level
+	TrieNode *nextSibling; // next element in the linked list at this level
+};
+
 static TrieNode *create_node(void)
 {
 	TrieNode *t = HeapAlloc(GetProcessHeap(), 0, sizeof(TrieNode));
@@ -22,7 +29,7 @@ static TrieNode *create_node(void)
 		return NULL;
 	}
 	t->key = '\0';
-	t->value = 0;
+	t->depth = 0;
 	t->nextSibling = NULL;
 	t->firstChild = NULL;
 	return t;
@@ -41,11 +48,11 @@ static void destroy_node(TrieNode *root)
 	HeapFree(GetProcessHeap(), 0, root);
 }
 
-static BOOL set(TrieNode *root, const char key[], int value)
+static BOOL add(TrieNode *root, const char key[], int depth)
 {
 	if (key[0] == '\0')
 	{
-		root->value = value;
+		root->depth = depth;
 		return TRUE;
 	}
 
@@ -55,7 +62,7 @@ static BOOL set(TrieNode *root, const char key[], int value)
 	{
 		if (child->key == key[0])
 		{
-			return set(child, key + 1, value);
+			return add(child, key + 1, depth + 1);
 		}
 		lastChild = child;
 		child = child->nextSibling;
@@ -79,14 +86,14 @@ static BOOL set(TrieNode *root, const char key[], int value)
 		lastChild->nextSibling = t;
 	}
 
-	return set(t, key + 1, value);
+	return add(t, key + 1, depth + 1);
 }
 
-static int get(TrieNode *root, const char key[])
+static int match_length(TrieNode *root, const char key[])
 {
 	if (key[0] == '\0')
 	{
-		return root->value;
+		return root->depth;
 	}
 
 	TrieNode *child = root->firstChild;
@@ -94,12 +101,16 @@ static int get(TrieNode *root, const char key[])
 	{
 		if (child->key == key[0])
 		{
-			return get(child, key + 1);
+			// if no deeper leaf was found, return value was 0
+			int res = match_length(child, key + 1);
+			// if deeper was 0, then take the current node (if it's a leaf, i.e. non-0)
+			return res != 0 ? res : root->depth;
 		}
 		child = child->nextSibling;
 	}
 
-	return 0;
+	// 0 if current node is not a leaf in the trie, otherwise current depth
+	return root->depth;
 }
 
 Trie trie_create(void)
@@ -112,12 +123,12 @@ void trie_destroy(Trie trie)
 	destroy_node(trie);
 }
 
-BOOL trie_set(Trie trie, const char key[], int value)
+BOOL trie_add(Trie trie, const char key[])
 {
-	return set(trie, key, value);
+	return add(trie, key, 0);
 }
 
-int trie_get(Trie trie, const char key[])
+int trie_longest_match(Trie trie, const char key[])
 {
-	return get(trie, key);
+	return match_length(trie, key);
 }
