@@ -1,4 +1,13 @@
+#define WIN32_LEAN_AND_MEAN
+
+#ifndef  UNICODE
+
+#define UNICODE
+
+#endif
+
 #include "trie.h"
+
 #pragma warning(push, 0) 
 #include <Windows.h>
 #pragma warning(pop) 
